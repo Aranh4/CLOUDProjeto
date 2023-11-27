@@ -11,7 +11,7 @@ variable "vpc_cidr_block" {
 variable "subnet_count" {
     type = map(number)
     default = {
-        public = 1
+        public = 2
         private = 2
     }
 }
