@@ -24,6 +24,8 @@ data "aws_availability_zones" "available" {
   
 }
 
+# VIRTUAL PRIVATE CLOUD-----------------------------------------------------
+
 resource "aws_vpc" "project_vpc" {
   cidr_block = var.vpc_cidr_block
 
@@ -33,7 +35,7 @@ resource "aws_vpc" "project_vpc" {
 }
 
 
-//SUBNET AND GATEWAY-----------------------------------------------------
+//SUBNETS AND GATEWAY-----------------------------------------------------
 resource "aws_subnet" "PublicSub" {
     count = var.subnet_count.public
 
@@ -177,6 +179,11 @@ resource "aws_db_instance" "database" {
 
 
     vpc_security_group_ids = [aws_security_group.db_sg.id]
+
+    backup_retention_period = 7
+    backup_window = "00:00-00:30"
+    maintenance_window = "Mon:01:00-Mon:04:00"
+    multi_az = true
     
 
   
@@ -185,49 +192,8 @@ resource "aws_db_instance" "database" {
 
 
 
-//EC2-----------------------------------------------------
 
-data "aws_ami" "ubuntu" {
-  most_recent = true
-  owners      = ["099720109477"]
-
-  filter {
-    name   = "name"
-    values = ["ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-*"]
-  }
-  filter {
-    name   = "virtualization-type"
-    values = ["hvm"]
-  }
-}
-
-
-# resource "aws_instance" "web_instance" {
-#     count = var.settings.web_app.count
-#   ami           = data.aws_ami.ubuntu.id
-#   instance_type = var.settings.web_app.instance_type
-#   key_name      = "MyKeyPair"
-
-#   subnet_id                   = aws_subnet.PublicSub[count.index].id
-#   vpc_security_group_ids      = [aws_security_group.web_sg.id]
-#   associate_public_ip_address = true
-
-#   user_data = <<-EOF
-#   #!/bin/bash -ex
-
-#   sudo apt update -y
-#   sudo apt install apache2    
-#   sudo systemctl enable apache2
-#   sudo systemctl start apache2  
-
-#   sudo apt install mysql-client -
-#   EOF
-
-
-# }
-
-
-#autoscaling-----------------------------------------------------
+#LAUNCH TEMPLATE & AUTOSCALLING GROUP-----------------------------------------------------
 
 resource "aws_launch_template" "my_lt" {
   name_prefix   = "my-launch-template"
@@ -303,8 +269,114 @@ resource "aws_autoscaling_group" "asg" {
     propagate_at_launch = true
   }   
 
-  # Other configurations...
+ 
 }
+
+
+#AUTOSCALLING POLICIES-----------------------------------------------------
+resource "aws_autoscaling_policy" "raise_capacity" {
+  name = "myasg-policy-raise"
+  autoscaling_group_name = aws_autoscaling_group.asg.name
+  adjustment_type = "ChangeInCapacity"
+  cooldown = 300
+  scaling_adjustment = 1
+}
+
+resource "aws_autoscaling_policy" "lower_capacity" {
+  name = "myasg-policy-lower"
+  autoscaling_group_name = aws_autoscaling_group.asg.name
+  adjustment_type = "ChangeInCapacity"
+  cooldown = 300
+  scaling_adjustment = -1
+}
+
+resource "aws_autoscaling_policy" "asg_policy" {
+  name                    = "my_asg_policy"
+  policy_type             = "TargetTrackingScaling"
+  autoscaling_group_name  = aws_autoscaling_group.asg.name
+  
+  target_tracking_configuration {
+    predefined_metric_specification {
+      
+      predefined_metric_type = "ALBRequestCountPerTarget"
+      resource_label =  "${split("/", aws_lb.mylb.id)[1]}/${split("/", aws_lb.mylb.id)[2]}/${split("/", aws_lb.mylb.id)[3]}/targetgroup/${split("/", aws_lb_target_group.mylb_target_group.arn )[1]}/${split("/", aws_lb_target_group.mylb_target_group.arn)[2]}"
+
+    }
+    target_value = 1000
+  }
+
+}
+
+
+
+#CLOUDWATCH ALARMS-----------------------------------------------------
+
+resource "aws_cloudwatch_metric_alarm" "raise_alarm" {
+  alarm_name = "myasg-raise-alarm"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  namespace = "AWS/EC2"
+  metric_name = "CPUUtilization"
+  statistic = "Average"
+  evaluation_periods = "1"
+  period = "60"
+  threshold = "70"
+  alarm_description = "Essa alarme sobe a escala do ASG monitorando a utilização da CPU da instância"
+  ok_actions = [aws_autoscaling_policy.lower_capacity.arn]
+  alarm_actions = [aws_autoscaling_policy.raise_capacity.arn]
+  dimensions = {
+    AutoScalingGroupName = aws_autoscaling_group.asg.name
+  }
+
+  tags = {
+    Name = "myasg-raise-alarm"
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "lower_alarm" {
+  alarm_name = "myasg-lower-alarm"
+  comparison_operator = "LessThanOrEqualToThreshold"
+  namespace = "AWS/EC2"
+  metric_name = "CPUUtilization"
+  statistic = "Average"
+  evaluation_periods = "1"
+  period = "60"
+  threshold = "10"
+  alarm_description = "Essa alarme desce a escala do ASG monitorando a utilização da CPU da instância"
+  ok_actions = [aws_autoscaling_policy.raise_capacity.arn]
+  alarm_actions = [aws_autoscaling_policy.lower_capacity.arn]
+  dimensions = {
+    AutoScalingGroupName = aws_autoscaling_group.asg.name
+  }
+
+  tags = {
+    Name = "myasg-lower-alarm"
+  }
+}
+
+# resource "aws_cloudwatch_metric_alarm" "myasg_alarm" {
+#   alarm_name = "myasg_alarm"
+#   comparison_operator = "GreaterThanOrEqualToThreshold"
+#   namespace = "AWS/ApplicationELB"
+#   metric_name = "RequestCountPerTarget"
+#   statistic = "Average"
+#   evaluation_periods = "1"
+#   period = "60"
+#   threshold = "1000"
+#   alarm_description = "Essa metrica monitora a quantidade de requisições por segundo no ALB"
+#   alarm_actions = [aws_autoscaling_policy.asg_policy.arn]
+#   dimensions = {
+#     LoadBalancer = aws_lb.mylb.arn
+#   }
+
+#   tags = {
+#     Name = "myasg_alarm_count_request"
+# }
+# }
+
+
+
+
+
 
 #LOAD BALANCER-----------------------------------------------------
 
