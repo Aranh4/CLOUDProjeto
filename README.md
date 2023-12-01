@@ -102,7 +102,7 @@ terraform destroy -var-file="secrets.tfvars" -auto-approve
 
 ## Validação da estrutura
 
-* Para garantir o healthcheck das instâncias, acesse o link disponibilizado como output (DNS do ALB com "/docs") após rodar *terraform apply* e realize um get no path "/healthcheck"
+* Para realizar manualmente o healthcheck das instâncias, acesse o link disponibilizado como output (DNS do ALB com "/docs") após rodar *terraform apply* e realize um get no path "/healthcheck"
 
 * Para acessar a aplicação entre no link disponibilizado como output (DNS do ALB com "/docs") após rodar *terraform apply* e teste o funcionamento do CRUD
 
