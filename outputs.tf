@@ -8,6 +8,11 @@
 # #   depends_on = [aws_instance.web_instance_eip]
 # # }
 
+output "link" {
+
+  value = "http://${aws_lb.mylb.dns_name}/docs"
+}
+
 output "db_endpoint" {
   value = aws_db_instance.database.address
 }

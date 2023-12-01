@@ -290,23 +290,6 @@ resource "aws_autoscaling_policy" "lower_capacity" {
   scaling_adjustment = -1
 }
 
-resource "aws_autoscaling_policy" "asg_policy" {
-  name                    = "my_asg_policy"
-  policy_type             = "TargetTrackingScaling"
-  autoscaling_group_name  = aws_autoscaling_group.asg.name
-  
-  target_tracking_configuration {
-    predefined_metric_specification {
-      
-      predefined_metric_type = "ALBRequestCountPerTarget"
-      resource_label =  "${split("/", aws_lb.mylb.id)[1]}/${split("/", aws_lb.mylb.id)[2]}/${split("/", aws_lb.mylb.id)[3]}/targetgroup/${split("/", aws_lb_target_group.mylb_target_group.arn )[1]}/${split("/", aws_lb_target_group.mylb_target_group.arn)[2]}"
-
-    }
-    target_value = 1000
-  }
-
-}
-
 
 
 #CLOUDWATCH ALARMS-----------------------------------------------------
@@ -352,28 +335,6 @@ resource "aws_cloudwatch_metric_alarm" "lower_alarm" {
     Name = "myasg-lower-alarm"
   }
 }
-
-# resource "aws_cloudwatch_metric_alarm" "myasg_alarm" {
-#   alarm_name = "myasg_alarm"
-#   comparison_operator = "GreaterThanOrEqualToThreshold"
-#   namespace = "AWS/ApplicationELB"
-#   metric_name = "RequestCountPerTarget"
-#   statistic = "Average"
-#   evaluation_periods = "1"
-#   period = "60"
-#   threshold = "1000"
-#   alarm_description = "Essa metrica monitora a quantidade de requisições por segundo no ALB"
-#   alarm_actions = [aws_autoscaling_policy.asg_policy.arn]
-#   dimensions = {
-#     LoadBalancer = aws_lb.mylb.arn
-#   }
-
-#   tags = {
-#     Name = "myasg_alarm_count_request"
-# }
-# }
-
-
 
 
 
