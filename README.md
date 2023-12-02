@@ -87,7 +87,7 @@ terraform init -upgrade
 ```
 *Para que o terraform faça o planejamento da arquitetura:* 
 ```
-terraform plan
+terraform plan -var-file="secrets.tfvars" 
 ```
 *Para subir a arquitetura na AWS:*
 ```
