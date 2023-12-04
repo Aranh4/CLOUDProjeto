@@ -78,7 +78,8 @@ Portanto é viável de afirmar que numa situação real que contaria com fatores
 #### 1. Instale o Terraform segindo as instruções disponíveis nesta página:  https://learn.hashicorp.com/tutorials/terraform/install-cli
 #### 2. Instale o AWS CLI seguindo as instruções disponíveis nesta página: https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
 #### 3. Clone o repositório na sua máquina
-#### 4. Abra o terminal na pasta raiz do projeto e rode os comandos a seguir:
+#### 4. Na sua conta da aws crie um bucket chamado: caiotieri-bucket (para que o S3 armazene o backend da aplicação)
+#### 5. Abra o terminal na pasta raiz do projeto e rode os comandos a seguir:
 
 
 *Para iniciar o terraform:*
@@ -94,7 +95,7 @@ terraform plan -var-file="secrets.tfvars"
 terraform apply -var-file="secrets.tfvars" -auto-approve
 ```
 
-#### 5. Para derrubar a arquitetura do ar basta execcutar o seguinte comando:
+#### 6. Para derrubar a arquitetura do ar basta execcutar o seguinte comando:
 
 ```
 terraform destroy -var-file="secrets.tfvars" -auto-approve
